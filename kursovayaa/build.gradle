@@ -1,0 +1,65 @@
+plugins {
+    id 'java'  // Плагин для работы с Java
+    id 'org.springframework.boot' version '3.4.0'  // Плагин для Spring Boot
+    id 'io.spring.dependency-management' version '1.1.6'  // Плагин для управления зависимостями Spring
+    id 'org.graalvm.buildtools.native' version '0.10.3'  // Плагин для сборки нативных образов с GraalVM
+}
+
+group = 'org.example'  // Группа проекта
+version = '0.0.1-SNAPSHOT'  // Версия проекта
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)  // Установка версии JDK
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor  // Конфигурация для аннотационных процессоров
+    }
+}
+
+repositories {
+    mavenCentral()  // Репозиторий для зависимостей
+}
+
+javadoc {
+    source = sourceSets.main.allJava  // Генерация документации из исходных файлов
+}
+
+dependencies {
+    // Зависимости Spring Boot для различных функциональностей
+    implementation 'org.springframework.boot:spring-boot-starter-data-rest'  // REST API с поддержкой Spring Data
+    implementation 'org.springframework.boot:spring-boot-starter-groovy-templates'  // Поддержка шаблонов Groovy
+    implementation 'org.springframework.boot:spring-boot-starter-security'  // Поддержка Spring Security
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'  // Поддержка Thymeleaf
+    implementation 'org.springframework.boot:spring-boot-starter-web'  // Поддержка Web (MVC)
+    implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'  // Поддержка Thymeleaf и Spring Security
+
+    // Зависимости для работы с JPA и базой данных
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    // Зависимости для разработки
+    compileOnly 'org.projectlombok:lombok'  // Ломбок для упрощения кода (только на этапе компиляции)
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'  // Утилиты для разработки
+
+    // Зависимости для работы с базой данных
+    runtimeOnly 'com.mysql:mysql-connector-j'  // MySQL коннектор для работы с базой данных MySQL
+
+    // Зависимости для аннотационных процессоров
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'  // Процессор для автоконфигурации Spring Boot
+    annotationProcessor 'org.projectlombok:lombok'  // Процессор для Ломбок
+
+    // Зависимости для тестирования
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'  // Тестирование с использованием Spring Boot
+    testImplementation 'org.springframework.security:spring-security-test'
+    runtimeOnly 'org.postgresql:postgresql'// Тестирование с использованием Spring Security
+
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.postgresql:postgresql:42.7.2'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()  // Настройка тестов для использования JUnit Platform
+}

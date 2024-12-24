@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <!-- Устанавливаем кодировку страницы -->
+    <meta charset="UTF-8">
+
+    <!-- Заголовок страницы -->
+    <title>Выставочный центр</title>
+
+    <!-- Подключаем стили Bootstrap для оформления страницы -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+
+    <style>
+        body {
+            background-color: #f9f9f9; /* Устанавливаем светлый фон */
+        }
+        .button-block {
+            margin-top: 20px; /* Увеличенный отступ сверху для кнопок */
+        }
+
+        .nav {
+            background-color: #f8f9fa; /* Фон для навигационного меню */
+            padding: 10px;
+        }
+        .nav .nav-link {
+            color: #007bff; /* Цвет текста для ссылок */
+            margin-right: 15px;
+            text-decoration: none; /* Убираем подчеркивание у ссылок */
+        }
+        .nav .nav-link:hover {
+            text-decoration: underline; /* Добавляем подчеркивание при наведении */
+        }
+    </style>
+
+</head>
+<body>
+<div class="bg-image" style="height: 100vh; overflow: auto">
+
+    <!-- Навигационное меню со ссылками на другие страницы -->
+    <nav>
+        <ul class="nav">
+            <li class="nav-item">
+                <a class="nav-link" href="/author">Об авторе</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/categories">Категории</a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Контейнер для кнопок -->
+    <div class="d-flex justify-content-center align-items-center p-3">
+        <!-- Кнопка для панели администратора, скрыта по умолчанию -->
+        <a id="usersButton" href="/users" class="me-2" style="display:none;">
+            <button type="button" class="btn btn-warning">Панель администратора</button>
+        </a>
+
+        <!-- Кнопка для выхода из системы -->
+        <form action="/logout" method="post" class="m-0">
+            <button type="submit" class="btn btn-danger">Выйти</button>
+        </form>
+    </div>
+
+    <!-- Заголовок для страницы -->
+    <blockquote class="blockquote text-center mt-4"><h1>Информационно-справочная система выставочного центра</h1></blockquote>
+
+    <!-- Форма для поиска экспонатов -->
+    <div class="row">
+        <div class="col-md-8 offset-md-4">
+            <form id="searchForm" onsubmit="event.preventDefault(); fetchExhibit();">
+                <input type="text" name="keyword" id="keyword" size="70" placeholder="Поиск"/> <!-- Поле для ввода ключевого слова -->
+                <input type="submit" class="btn btn-success btn-sm" value="Поиск"/> <!-- Кнопка для поиска -->
+                <input type="button" class="btn btn-warning btn-sm" value="Очистить" onclick="clearSearch()"/> <!-- Кнопка для очистки поиска -->
+            </form>
+        </div>
+    </div>
+
+    <!-- Кнопки "Добавить экспонат" и "Гистограмма" -->
+    <div class="button-block">
+        <blockquote class="blockquote text-center">
+            <a href="/new-exhibit">
+                <button type="button" class="btn btn-primary">Добавить экспонат</button>
+            </a>
+        </blockquote>
+        <blockquote class="blockquote text-center">
+            <a href="/histogram">
+                <button type="button" class="btn btn-secondary">Гистограмма</button>
+            </a>
+        </blockquote>
+
+        <!-- Отображение количества экспонатов в таблице -->
+        <p class="text-dark" id="productCount" style="margin-top: 20px;">
+            Количество экспонатов в таблице: <span id="productCountValue">0</span>
+        </p>
+
+        <!-- Таблица для отображения списка экспонатов -->
+        <table id="productTable" class="table table-striped table-hover">
+            <thead>
+            <tr>
+                <th scope="col" class="sortable" data-field="id">ID экспоната</th>
+                <th scope="col" class="sortable" data-field="category">Категория</th>
+                <th scope="col" class="sortable" data-field="name">Название</th>
+                <th scope="col" class="sortable" data-field="author">Автор</th>
+                <th scope="col" class="sortable" data-field="deliveryDate">Дата поставки</th>
+                <th scope="col">Действия</th>
+            </tr>
+            </thead>
+            <tbody id="productTableBody">
+            <!-- Экспонаты будут добавлены динамически через JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <script type="text/javascript">
+        // Функция для получения текущего пользователя
+        async function getCurrentUser() {
+            const response = await fetch('/api/users/current');
+            if (response.ok) {
+                return await response.json(); // Возвращаем данные текущего пользователя
+            }
+            return null; // Если не удалось получить данные, возвращаем null
+        }
+
+        // Функция для проверки ролей пользователя
+        async function checkUserRoles() {
+            const user = await getCurrentUser();
+            if (user && user.roles && user.roles.some(role => role.name === 'ROLE_ADMIN')) {
+                document.getElementById('usersButton').style.display = 'inline-block'; // Показываем кнопку администрирования для администратора
+            }
+        }
+
+        // Функция для очистки поля поиска
+        function clearSearch() {
+            document.getElementById('keyword').value = ''; // Очищаем поле ввода
+            fetchExhibit(); // Перезапускаем поиск с пустым запросом
+        }
+
+        // Функция для получения Экспонатов по ключевому слову
+        async function fetchExhibit() {
+            const keyword = document.getElementById('keyword').value;
+            const response = await fetch(`/api/exhibits?keyword=${keyword}`); // Отправляем запрос на сервер с ключевым словом
+            if (response.ok) {
+                const exhibits = await response.json(); // Получаем список Экспонатов
+                updateProductTable(exhibits); // Обновляем таблицу Экспонатов
+            }
+        }
+
+        // Функция для обновления таблицы Экспонатов
+        function updateProductTable(exhibits) {
+            const tableBody = document.getElementById('productTableBody');
+            tableBody.innerHTML = ''; // Очищаем таблицу перед добавлением новых данных
+
+            // Добавляем строки в таблицу для каждого Экспоната
+            exhibits.forEach(exhibit => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <th scope="row">${exhibit.id}</th>
+                    <td>${exhibit.category.name}</td>
+                    <td>${exhibit.name}</td>
+                    <td>${exhibit.author}</td>
+                    <td>${exhibit.deliveryDate}</td>
+                    <td>
+                        <a href="/edit-exhibit/${exhibit.id}"><button type="button" class="btn btn-info">Редактировать</button></a>
+                        <button type="button" class="btn btn-danger" onclick="deleteExhibit(${exhibit.id})">Удалить</button>
+                    </td>
+                `;
+                tableBody.appendChild(row); // Добавляем строку в таблицу
+            });
+
+            // Обновляем количество экспонатов
+            document.getElementById('productCountValue').textContent = exhibits.length;
+        }
+
+        // Функция для удаления экспоната
+        async function deleteExhibit(id) {
+            const response = await fetch(`/api/exhibits/${id}`, {
+                method: 'DELETE', // Метод для удаления
+            });
+            if (response.ok) {
+                fetchExhibit(); // Обновляем таблицу после удаления экспоната
+            } else {
+                alert('Ошибка при удалении экспоната'); // Ошибка при удалении экспоната
+            }
+        }
+
+        // Загрузка данных при запуске страницы
+        window.onload = async function() {
+            await checkUserRoles(); // Проверяем роли пользователя
+            await fetchExhibit(); // Загружаем Экспонаты при загрузке страницы
+        };
+
+        // Сортировка таблицы
+        document.addEventListener('DOMContentLoaded', function () {
+            const table = document.getElementById('productTable');
+            const headers = table.querySelectorAll('th.sortable');
+            const tbody = table.querySelector('tbody');
+
+            headers.forEach(header => {
+                header.addEventListener('click', () => {
+                    const fieldIndex = Array.from(headers).indexOf(header);
+                    const rows = Array.from(tbody.rows);
+
+                    const isAscending = header.classList.contains('ascending');
+                    header.classList.toggle('ascending', !isAscending);
+                    header.classList.toggle('descending', isAscending);
+
+                    rows.sort((a, b) => {
+                        const aText = a.cells[fieldIndex].textContent.trim();
+                        const bText = b.cells[fieldIndex].textContent.trim();
+
+                        if (isNaN(aText) || isNaN(bText)) {
+                            // Сравнение строк
+                            return isAscending ? aText.localeCompare(bText) : bText.localeCompare(aText);
+                        }
+                        // Сравнение чисел
+                        return isAscending ? aText - bText : bText - aText;
+                    });
+
+                    // Добавляем отсортированные строки обратно в таблицу
+                    rows.forEach(row => tbody.appendChild(row));
+                });
+            });
+        });
+    </script>
+</div>
+</body>
+</html>
